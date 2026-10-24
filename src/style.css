@@ -1,3 +1,44 @@
 body {
+  position: relative;
   margin: 0;
+  min-height: 100vh;
+  font-family: Verdana, Geneva, Tahoma, sans-serif;
+  .area-info {
+    position: absolute;
+    color: white;
+    font-size: 22px;
+    left: 10px;
+    top: 10px;
+  }
+  .controls {
+    position: absolute;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    width: 90%;
+    gap: 16px;
+    bottom: 0;
+    margin-bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: white;
+    font-size: 22px;
+    button {
+      cursor: pointer;
+      padding: 10px;
+      font-size: 16px;
+    }
+    button:disabled {
+      cursor: not-allowed;
+    }
+    .control-group {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 12px;
+      background: rgba(30, 30, 46, 0.65);
+      padding: 8px 12px;
+    }
+  }
 }

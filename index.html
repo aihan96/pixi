@@ -8,6 +8,25 @@
   </head>
   <body>
     <div id="app"></div>
+    <!-- area-info -->
+    <div class="area-info">
+      <span id="area-info-label">Shapes: 0 Area: 0px²</span>
+    </div>
+    <!-- controls -->
+    <div class="controls">
+      <div class="control-group">
+        <span>Shapes / sec </span>
+        <button id="rate-decrease">−</button>
+        <strong id="rate-value"></strong>
+        <button id="rate-increase">+</button>
+      </div>
+      <div class="control-group">
+        <span>Gravity: </span>
+        <button id="gravity-decrease">−</button>
+        <strong id="gravity-value"></strong>
+        <button id="gravity-increase">+</button>
+      </div>
+    </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
