@@ -22,12 +22,36 @@ const GRAVITY_OPTIONS: ControlOptions = {
   step: 5,
 };
 
+type ShapeKind =
+  | "triangle"
+  | "square"
+  | "pentagon"
+  | "hexagon"
+  | "circle"
+  | "ellipse"
+  | "star";
+
+const KINDS: ShapeKind[] = [
+  "triangle",
+  "square",
+  "pentagon",
+  "hexagon",
+  "circle",
+  "ellipse",
+  "star",
+];
+
+class Shape extends Graphics {
+  // vy = 0;
+  area = 0;
+}
+
 export class App {
   private pixi = new Application();
-  private rects: Graphics[] = [];
+  private shapes: Shape[] = [];
   private spawnTimer = 0;
   private spawnInterval = 1000; // ms
-  private rectsLayer!: Container;
+  private shapesLayer!: Container;
   private gravity: number = GRAVITY_OPTIONS.initial;
 
   public async init(host: HTMLElement) {
@@ -44,57 +68,61 @@ export class App {
     host.appendChild(this.pixi.canvas);
     this.pixi.stage.eventMode = "static";
     this.pixi.stage.hitArea = this.pixi.screen;
+
     this.pixi.stage.on("pointerdown", (e) => {
-      this.spawnRect(e.global.x, e.global.y);
+      this.spawnShape(e.global.x, e.global.y);
     });
 
-    this.rectsLayer = new Container();
-    this.pixi.stage.addChild(this.rectsLayer);
+    this.shapesLayer = new Container();
+    this.pixi.stage.addChild(this.shapesLayer);
 
     this.pixi.ticker.add((t) => {
       this.spawnTimer += t.deltaMS;
       if (this.spawnTimer >= this.spawnInterval) {
-        this.spawnRect();
+        this.spawnShape();
         this.spawnTimer -= this.spawnInterval;
       }
 
-      const oldRectsLength = this.rects.length;
-      this.rects = this.rects.filter((r) => {
-        r.y += this.gravity * t.deltaTime; // moves down, Multiplying by deltaTime keeps the speed the same on every screen
-        if (r.y - r.height / 2 > this.pixi.screen.height) {
-          r.destroy();
+      const oldShapesLength = this.shapes.length;
+      this.shapes = this.shapes.filter((shape) => {
+        shape.y += this.gravity * t.deltaTime; // moves down, Multiplying by deltaTime keeps the speed the same on every screen
+        if (shape.y - shape.height / 2 > this.pixi.screen.height) {
+          shape.destroy();
           return false;
         }
         return true;
       });
-      if (this.rects.length !== oldRectsLength) this.updateAreaInfoStats();
+      if (this.shapes.length !== oldShapesLength) this.updateAreaInfoStats();
     });
 
     this.initControls();
   }
 
-  private spawnRect(x?: number, y?: number) {
+  private spawnShape(x?: number, y?: number) {
+    const kind = KINDS[Math.floor(Math.random() * KINDS.length)];
+    const shape = this.createShape(kind);
     // It pops in at the top. With y = 0 the whole rect appears instantly, because its top edge is on the screen edge. To have it slide in from above, start it fully off-screen:
     // The height is size * 2 (120px), so -size * 2 places the bottom edge exactly at the top of the screen. Keeping 0 is fine if you want the instant appearance.
-    const w = randomRange(50, 150);
-    const h = randomRange(50, 150);
-    const rect = new Graphics()
-      .rect(-w / 2, -h / 2, w, h)
-      .fill(`hsl(${Math.random() * 360}, 80%, 60%)`);
-    rect.position.set(
-      x ?? Math.random() * (this.pixi.screen.width - w), //Without subtracting w, the rect can spawn partly off the right edge.
-      y ?? -h,
+
+    //Without subtracting w, the rect can spawn partly off the right edge.
+
+    // shape.position.set(0, 0);
+    shape.position.set(
+      x ??
+        shape.width / 2 +
+          Math.random() * (this.pixi.screen.width - shape.width),
+      y ?? -shape.height / 2,
     );
-    rect.eventMode = "static";
-    rect.cursor = "pointer";
-    rect.on("pointerdown", (e) => {
+    shape.eventMode = "static";
+    shape.cursor = "pointer";
+    shape.on("pointerdown", (e) => {
       e.stopPropagation();
-      this.rects = this.rects.filter((r) => r !== rect);
-      rect.destroy();
+      this.shapes = this.shapes.filter((r) => r !== shape);
+      shape.destroy();
       this.updateAreaInfoStats();
     });
-    this.rectsLayer.addChild(rect);
-    this.rects.push(rect);
+    this.shapesLayer.addChild(shape);
+    this.shapes.push(shape);
     this.updateAreaInfoStats();
   }
 
@@ -103,8 +131,8 @@ export class App {
       "area-info-label",
     ) as HTMLSpanElement;
 
-    const total = this.rects.reduce((sum, r) => sum + r.width * r.height, 0);
-    areaInfoLabel.textContent = `Rects: ${this.rects.length} Area: ${Math.round(total)}px²`;
+    const total = this.shapes.reduce((sum, r) => sum + r.area, 0);
+    areaInfoLabel.textContent = `Rects: ${this.shapes.length} Area: ${Math.round(total)}px²`;
   }
 
   private initControls() {
@@ -119,7 +147,7 @@ export class App {
 
   private handleControlChange(
     id: string,
-    opts: ControlOptions,
+    options: ControlOptions,
     onChange: (value: number) => void,
   ) {
     const decreaseBtn = document.getElementById(
@@ -131,24 +159,70 @@ export class App {
     const valueLabel = document.getElementById(
       `${id}-value`,
     ) as HTMLSpanElement;
-    let value = opts.initial;
+    let value = options.initial;
 
     const setValues = () => {
       valueLabel.textContent = String(value);
-      decreaseBtn.disabled = value <= opts.min;
-      increaseBtn.disabled = value >= opts.max;
+      decreaseBtn.disabled = value <= options.min;
+      increaseBtn.disabled = value >= options.max;
       onChange(value);
     };
 
     decreaseBtn.addEventListener("click", () => {
-      value = Math.max(opts.min, value - opts.step);
+      value = Math.max(options.min, value - options.step);
       setValues();
     });
     increaseBtn.addEventListener("click", () => {
-      value = Math.min(opts.max, value + opts.step);
+      value = Math.min(options.max, value + options.step);
       setValues();
     });
 
-    setValues(); // sync the display and the field with the initial value
+    setValues();
+  }
+
+  private createShape(kind: ShapeKind): Shape {
+    const shape = new Shape();
+    const radius = randomRange(25, 75);
+    const polyArea = (n: number) =>
+      0.5 * n * radius * radius * Math.sin((2 * Math.PI) / n);
+    switch (kind) {
+      case "triangle":
+        shape.regularPoly(0, 0, radius, 3);
+        shape.area = polyArea(3);
+        break;
+      case "square":
+        shape.regularPoly(0, 0, radius, 4, Math.PI / 4);
+        shape.area = polyArea(4);
+        break;
+      case "pentagon":
+        shape.regularPoly(0, 0, radius, 5);
+        shape.area = polyArea(5);
+        break;
+      case "hexagon":
+        shape.regularPoly(0, 0, radius, 6);
+        shape.area = polyArea(6);
+        break;
+      case "circle":
+        shape.circle(0, 0, radius);
+        shape.area = Math.PI * radius * radius;
+        break;
+      case "ellipse": {
+        const rx = radius;
+        const ry = radius * randomRange(0.4, 0.7);
+        shape.ellipse(0, 0, rx, ry);
+        shape.area = Math.PI * rx * ry;
+        break;
+      }
+      case "star": {
+        const inner = radius * 0.45;
+        shape.star(0, 0, 5, radius, inner);
+        shape.area = 5 * radius * inner * Math.sin(Math.PI / 5);
+        break;
+      }
+    }
+
+    return shape.fill(
+      `hsl(${Math.random() * 360}, 80%, ${50 + Math.random() * 20}%)`,
+    );
   }
 }
